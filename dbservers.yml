@@ -1,0 +1,31 @@
+---
+# create EC2 instances
+- hosts: localhost
+  gather_facts: False
+  vars_files:
+    - vars/config.yml
+    - vars/credentials.yml
+    - "regions/mongodb_{{ target_region }}_{{ deloyment_group }}.yml"
+  roles:
+    - role: create_ec2_mongo_stack
+
+# configure the mongo hosts
+- hosts: mongo:mongodb_leader
+  gather_facts: False
+  become: yes
+  vars_files:
+    - vars/config.yml
+    - vars/credentials.yml
+    - "regions/mongodb_{{ target_region }}_{{ deployment_group }}.yml"
+  roles:
+    - role: install_mongo
+
+# initialize replication from the leader
+- hosts: mongodb_leader
+  gather_facts: False
+  vars_files:
+    - vars/config.yml
+    - vars/credentials.yml
+    - "regions/mongodb_{{ aws_region }}_{{ deployment_group }}.yml"
+  roles:
+    - init_mongo_replication

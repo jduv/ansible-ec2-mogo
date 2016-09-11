@@ -1,0 +1,88 @@
+---
+# Create security group
+- name: Create security groups for Mongo
+  ec2_group:
+    name: "mongo-access-{{ deployment.region }}"
+    description: "Security group to control mongo access"
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    region: "{{ deployment.region }}"
+    vpc_id: "{{ mongo_vpc.vpc_id }}"
+    rules:
+      - proto: tcp
+        from_port: 27017
+        to_port: 27019
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 28017
+        to_port: 28017
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+    rules_egress:
+      - proto: all
+        cidr_ip: 0.0.0.0/0
+  register: mongo_security
+
+######################
+# MongoDB leader
+######################
+
+
+# Create the database stack
+- name: Create the EC2 instances for the database tier
+  ec2:
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    instance_type: "{{ dbtier_instance_type }}"
+    image: "{{ deployment.dbtier.ami_id }}"
+    wait: yes
+    region: "{{ target_region }}"
+    assign_public_ip: yes
+    vpc_subnet_id: "{{ item.1.subnet_id }}"
+    group_id:
+      - "{{ mongo_security.group_id }}"
+    instance_tags:
+      Application: "{{ application }}"
+      Name: "MongoDBTier"
+      Environment: "{{ deployment.environment }}"
+      Deployment-Group: "{{ deployment.group }}"
+    exact_count: "{{ item.0.ensure_count }}"
+    count_tag: 
+      Type: MongoDB
+      Application: "{{ application }}"
+      Deployment-Group: "{{ deployment.group }}"
+    zone: "{{ item.0.zone }}"
+    key_name: "{{ dbtier_ssh_key_name }}"
+  register: dbtier_boxes
+  with_nested: 
+    - "{{ deployment.mongodb.azs }}"
+    - "{{ dbtier_subnets_to_azs }}"
+  when: item.0.zone == item.1.zone
+
+# Add hosts to the list for processing.
+- name: Add DB tier boxes to host inventory
+  add_host:
+    hostname: "{{ item.1.public_dns_name }}"
+    groups: mongo
+    private_ip: "{{ item.1.private_ip }}"
+    ansible_user: "{{ ec2_ssh_user }}"
+    ansible_ssh_private_key_file: "{{ dbtier_ssh_key_path }}"
+  with_subelements:
+    - "{{ dbtier_boxes.results }}"
+    - tagged_instances
+
+# Wait for SSH to come up
+- name: Wait for SSH to come up on web tier boxes
+  wait_for:
+    host: "{{ item.1.public_dns_name }}"
+    port: 22
+    timeout: 320
+    state: started
+    search_regex: OpenSSH
+    delay: 10
+  with_subelements:
+    - "{{ dbtier_boxes.results }}"
+    - tagged_instances

@@ -1,0 +1,10 @@
+rs.initiate()
+sleep(13000)
+
+{% if groups['mongodb'] is defined %}
+{% for host in groups['mongodb'] %}
+rs.add("{{ hostvars[host].private_ip}}:{{ mongo_spec.port }}")
+sleep(8000)
+{% endfor %}
+{% endif %}
+printjson(rs.status())

@@ -1,0 +1,16 @@
+---
+deployment:
+  group: "{{ deployment_group }}"
+  region: "{{ target_region }}"
+  environment: "{{ env }}"
+  vpc_cidr: 172.24.0.0/16
+  mongodb:
+    ami_id: ami-6869aa05
+    replica_set: "repl-{{ target_region }}"
+    leader:
+      zone: "us-east-1a"
+      subnet_cidr: 172.24.1.0/24
+    azs:
+      - zone: "us-east-1b"
+        ensure_count: 2
+        subnet_cidr: 172.24.1.0/24

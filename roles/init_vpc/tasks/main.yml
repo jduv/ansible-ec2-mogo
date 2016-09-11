@@ -1,0 +1,33 @@
+---
+- name: Create a VPC for the whole stack
+  ec2_vpc:
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    region: "{{ target_region }}"
+    state: present
+    cidr_block: "{{ deployment.vpc_cidr }}"
+    resource_tags:
+      Name: MongoDBVpc
+      Application: "{{ application }}"
+    internet_gateway: True
+  register: mongo_vpc
+
+# Create the subnets for the database tier
+- name: Assign subnets per AZ for the database tier
+  ec2_vpc_subnet:
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    region: "{{ target_region }}"
+    vpc_id: "{{ mongo_vpc.vpc_id }}"
+    az: "{{ item.zone }}"
+    cidr: "{{ item.subnet_cidr }}"
+    resource_tags:
+      Name: "MongoDBSubnet"
+      Application: "{{ application }}"
+  register: dbtier_subnets
+  with_items: "{{ deployment.dbtier.azs }}"
+
+- name: Iterating over subnets and registering subnet IDs to AZs
+  set_fact:
+    dbtier_subnets_to_azs: "{{ dbtier_subnets_to_azs + [ { 'subnet_id': item.subnet.id , 'zone': item.subnet.availability_zone }] }}"
+  with_items: "{{ dbtier_subnets.results }}"

@@ -1,0 +1,11 @@
+---
+# Copy the repo file to /etc/yum.repos.d
+- name: Copy the repo file for mongo
+  template:
+    force: yes
+    src: mongodb-org-3.2.repo
+    dest: /etc/yum.repos.d/
+
+# install and configure MongoDB
+- name: Install MongoDB
+  shell: yum install -y mongodb-org

@@ -1,0 +1,12 @@
+---
+# This task executes the required steps to initialize mongo's
+# replication on the hosts provided. It is very much recommended
+# to limit this task to executing on a SINGLE mongodb box and not
+# all of them. Else, you will get errors.
+- name: Copy the initialization script to tmp
+  template:
+    src: init_replication.j2
+    dest: /tmp/init_replication.js
+
+- name: Execute the initialization script and add all replicants
+  shell: mongo /tmp/init_replication.js

@@ -1,0 +1,16 @@
+---
+# First, let's create the stacks in AWS. This includes building
+# out all the required EC2 instances, load balancers, jump boxes
+# VPCs, etc.
+- hosts: localhost
+  gather_facts: False
+  connection: local
+  vars_files:
+    - vars/config.yml
+    - vars/credentials.yml
+    - "regions/mongodb_{{ target_region }}_{{ deployment_group }}.yml"
+  roles:
+    - init_vpc
+
+# Build the DB servers
+- include: dbservers.yml
