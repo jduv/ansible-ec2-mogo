@@ -1,0 +1,2 @@
+# Mongo + AWS via Ansible
+This example is explained in the following post. Give it a read, feel free to copy this code and modify to your hearts content, just do us a favor and give us a little internet love.
