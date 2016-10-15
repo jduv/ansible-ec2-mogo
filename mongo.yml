@@ -5,7 +5,7 @@
   vars_files:
     - vars/config.yml
     - vars/credentials.yml
-    - "regions/mongodb_{{ target_region }}_{{ deloyment_group }}.yml"
+    - "regions/mongodb_{{ target_region }}_{{ deployment_group }}.yml"
   roles:
     - role: create_ec2_mongo_stack
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ $# -ne 2 ]; then 
+if [ $# -ne 2 ]; then
 	echo "Illegal number of parameters. AWS region and environment required!"
 	echo "Usage: install-mongo-in us-east-1 production"
 	exit 1;
@@ -24,4 +24,3 @@ for build in "${BUILDS[@]}"; do
 	echo "Running command: $ANSIBLE"
 	eval "${ANSIBLE}"
 done
-unset -e

@@ -7,13 +7,25 @@
     state: present
     cidr_block: "{{ deployment.vpc_cidr }}"
     resource_tags:
-      Name: MongoDBVpc
+      Name: "MongoDBVpc_{{ deployment.environment }}"
       Application: "{{ application }}"
     internet_gateway: True
   register: mongo_vpc
 
-# Create the subnets for the database tier
-- name: Assign subnets per AZ for the database tier
+- name: Create a subnet for the leader node
+  ec2_vpc_subnet:
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    region: "{{ target_region }}"
+    vpc_id: "{{ mongo_vpc.vpc_id }}"
+    az: "{{ deployment.mongodb.leader.zone }}"
+    cidr: "{{ deployment.mongodb.leader.subnet_cidr }}"
+    resource_tags:
+      Name: "MongoDBLeaderSubnet"
+      Application: "{{ application }}"
+  register: mongo_leader_subnet
+
+- name: Per AWS, create a subnet per AZ
   ec2_vpc_subnet:
     aws_access_key: "{{ access_key_id }}"
     aws_secret_key: "{{ secret_access_key }}"
@@ -24,10 +36,10 @@
     resource_tags:
       Name: "MongoDBSubnet"
       Application: "{{ application }}"
-  register: dbtier_subnets
-  with_items: "{{ deployment.dbtier.azs }}"
+  register: mongo_subnets
+  with_items: "{{ deployment.mongodb.azs }}"
 
 - name: Iterating over subnets and registering subnet IDs to AZs
   set_fact:
-    dbtier_subnets_to_azs: "{{ dbtier_subnets_to_azs + [ { 'subnet_id': item.subnet.id , 'zone': item.subnet.availability_zone }] }}"
-  with_items: "{{ dbtier_subnets.results }}"
+    mongo_subnets_to_azs: "{{ mongo_subnets_to_azs + [ { 'subnet_id': item.subnet.id , 'zone': item.subnet.availability_zone }] }}"
+  with_items: "{{ mongo_subnets.results }}"

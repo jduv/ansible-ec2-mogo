@@ -13,4 +13,4 @@
     - init_vpc
 
 # Build the DB servers
-- include: dbservers.yml
+- include: mongo.yml

@@ -29,15 +29,65 @@
 ######################
 # MongoDB leader
 ######################
-
-
-# Create the database stack
-- name: Create the EC2 instances for the database tier
+- name: Create the single mongoDB leader node
   ec2:
     aws_access_key: "{{ access_key_id }}"
     aws_secret_key: "{{ secret_access_key }}"
-    instance_type: "{{ dbtier_instance_type }}"
-    image: "{{ deployment.dbtier.ami_id }}"
+    instance_type: "{{ deployment.mongodb.instance_type }}"
+    image: "{{ deployment.mongodb.ami_id }}"
+    wait: yes
+    region: "{{ target_region }}"
+    assign_public_ip: yes
+    vpc_subnet_id: "{{ mongo_leader_subnet.subnet.id }}"
+    group_id:
+      - "{{ mongo_security.group_id }}"
+    instance_tags:
+      Application: "{{ application }}"
+      Name: "MongoDBLeader"
+      Environment: "{{ deployment.environment }}"
+      Deployment-Group: "{{ deployment.group }}"
+      Type: MongoDBLeader
+    exact_count: 1
+    count_tag:
+      Type: MongoDBLeader
+      Deployment-Group: "{{ deployment.group }}"
+      Environment: "{{ deployment.environment }}"
+    zone: "{{ deployment.mongodb.leader.zone }}"
+    key_name: "{{ ssh_key_name }}"
+  register: mongo_leader_box
+
+# Wait for SSH to come up
+- name: Check for SSH on the leader box
+  wait_for:
+    host: "{{ mongo_leader_box.tagged_instances.0.public_dns_name }}"
+    port: 22
+    timeout: 320
+    state: started
+    search_regex: OpenSSH
+    delay: 10
+
+# Add hosts to the list for processing.
+- name: Add the minion boxes to host inventory
+  add_host:
+    hostname: "{{ item.public_dns_name }}"
+    groups: mongo
+    private_ip: "{{ item.private_ip }}"
+    ansible_user: "{{ ec2_ssh_user }}"
+    ansible_ssh_private_key_file: "{{ ssh_key_path }}"
+  with_items:
+    - mongo_leader_box.tagged_instances.0
+
+######################
+# MongoDB minions
+######################
+
+# Create the database stack
+- name: Create minion nodes
+  ec2:
+    aws_access_key: "{{ access_key_id }}"
+    aws_secret_key: "{{ secret_access_key }}"
+    instance_type: "{{ deployment.mongodb.instance_type }}"
+    image: "{{ deployment.mongodb.ami_id }}"
     wait: yes
     region: "{{ target_region }}"
     assign_public_ip: yes
@@ -49,33 +99,22 @@
       Name: "MongoDBTier"
       Environment: "{{ deployment.environment }}"
       Deployment-Group: "{{ deployment.group }}"
+      Type: MongoDBMinion
     exact_count: "{{ item.0.ensure_count }}"
-    count_tag: 
-      Type: MongoDB
-      Application: "{{ application }}"
+    count_tag:
+      Type: MongoDBMinion
       Deployment-Group: "{{ deployment.group }}"
+      Environment: "{{ deployment.environment }}"
     zone: "{{ item.0.zone }}"
-    key_name: "{{ dbtier_ssh_key_name }}"
-  register: dbtier_boxes
-  with_nested: 
+    key_name: "{{ ssh_key_name }}"
+  register: mongo_boxes
+  with_nested:
     - "{{ deployment.mongodb.azs }}"
-    - "{{ dbtier_subnets_to_azs }}"
+    - "{{ mongo_subnets_to_azs }}"
   when: item.0.zone == item.1.zone
 
-# Add hosts to the list for processing.
-- name: Add DB tier boxes to host inventory
-  add_host:
-    hostname: "{{ item.1.public_dns_name }}"
-    groups: mongo
-    private_ip: "{{ item.1.private_ip }}"
-    ansible_user: "{{ ec2_ssh_user }}"
-    ansible_ssh_private_key_file: "{{ dbtier_ssh_key_path }}"
-  with_subelements:
-    - "{{ dbtier_boxes.results }}"
-    - tagged_instances
-
 # Wait for SSH to come up
-- name: Wait for SSH to come up on web tier boxes
+- name: Wait for SSH to come up on the minion boxes
   wait_for:
     host: "{{ item.1.public_dns_name }}"
     port: 22
@@ -84,5 +123,17 @@
     search_regex: OpenSSH
     delay: 10
   with_subelements:
-    - "{{ dbtier_boxes.results }}"
+    - "{{ mongo_boxes.results }}"
+    - tagged_instances
+
+# Add hosts to the list for processing.
+- name: Add the minion boxes to host inventory
+  add_host:
+    hostname: "{{ item.1.public_dns_name }}"
+    groups: mongo
+    private_ip: "{{ item.1.private_ip }}"
+    ansible_user: "{{ ec2_ssh_user }}"
+    ansible_ssh_private_key_file: "{{ ssh_key_path }}"
+  with_subelements:
+    - "{{ mongo_boxes.results }}"
     - tagged_instances

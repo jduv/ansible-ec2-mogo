@@ -2,3 +2,5 @@ vault-password.txt
 *.retry
 *.pem
 *.pem.encrypted
+credentials.yml
+.DS_Store

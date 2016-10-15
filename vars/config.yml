@@ -1,15 +1,11 @@
 ---
 # SSH configuration
 ec2_ssh_user: ec2-user
-dbtier_ssh_key_name: Mongo-Prod
-dbtier_ssh_key_path: keys/Mongo-Prod.pem
+ssh_key_name: mongo
+ssh_key_path: keys/mongo.pem
 
 # Miscellaneous
 application: MongoExample
-dbtier_instance_type: t2.micro
 
-# global variables 
-
-# used to map subnet values to availability zones.
-# not sure of a better way to do this at the moment
-dbtier_subnets_to_azs: []
+# global variables
+mongo_subnets_to_azs: []
