@@ -10,7 +10,7 @@
     - role: create_ec2_mongo_stack
 
 # configure the mongo hosts
-- hosts: mongo:mongodb_leader
+- hosts: mongo:mongo_leader
   gather_facts: False
   become: yes
   vars_files:
@@ -21,7 +21,7 @@
     - role: install_mongo
 
 # initialize replication from the leader
-- hosts: mongodb_leader
+- hosts: mongo_leader
   gather_facts: False
   vars_files:
     - vars/config.yml

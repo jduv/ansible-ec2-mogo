@@ -67,15 +67,13 @@
     delay: 10
 
 # Add hosts to the list for processing.
-- name: Add the minion boxes to host inventory
+- name: Add the leader box to host inventory
   add_host:
-    hostname: "{{ item.public_dns_name }}"
-    groups: mongo
-    private_ip: "{{ item.private_ip }}"
+    hostname: "{{ mongo_leader_box.tagged_instances.0.public_dns_name }}"
+    groups: mongo_leader
+    private_ip: "{{ mongo_leader_box.tagged_instances.0.private_ip }}"
     ansible_user: "{{ ec2_ssh_user }}"
     ansible_ssh_private_key_file: "{{ ssh_key_path }}"
-  with_items:
-    - mongo_leader_box.tagged_instances.0
 
 ######################
 # MongoDB minions

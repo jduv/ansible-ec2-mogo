@@ -9,3 +9,12 @@
 # install and configure MongoDB
 - name: Install MongoDB
   shell: yum install -y mongodb-org
+
+- name: Copy the configuration file template to the remote host
+  template:
+    force: yes
+    src: mongod.j2
+    dest: /etc/mongod.conf
+
+- name: Start the mongo daemon
+  service: name=mongod state=restarted
