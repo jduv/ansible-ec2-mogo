@@ -16,5 +16,5 @@ deployment:
         ensure_count: 2
         subnet_cidr: 172.24.2.0/24
       - zone: "us-east-1b"
-        ensure_count: 2
+        ensure_count: 1
         subnet_cidr: 172.24.1.0/24
